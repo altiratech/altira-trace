@@ -1,0 +1,473 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  FOUNDER_ADMIN
+  CCO
+  OPERATIONS
+  SUPERVISED_PERSON
+  EXTERNAL_CONSULTANT
+}
+
+enum RegistrationType {
+  STATE
+  SEC
+  HYBRID
+}
+
+enum LaunchStage {
+  PRE_LAUNCH
+  NEWLY_LAUNCHED
+  OPERATING
+}
+
+enum AumBand {
+  UNDER_25M
+  BETWEEN_25M_100M
+  BETWEEN_100M_500M
+  ABOVE_500M
+}
+
+enum WorkStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  NEEDS_REVIEW
+  COMPLETE
+}
+
+enum ReviewStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum AnnualReviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  READY_FOR_SIGNOFF
+  COMPLETE
+}
+
+enum ExamRequestStatus {
+  OPEN
+  IN_PROGRESS
+  READY_TO_SEND
+  COMPLETE
+}
+
+enum ArtifactCategory {
+  POLICY
+  FILING
+  EVIDENCE
+  MARKETING
+  VENDOR
+  INCIDENT
+  TRAINING
+  REVIEW
+  OTHER
+}
+
+enum VendorRiskTier {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DiligenceStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+  ATTENTION_REQUIRED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  MONITORING
+  RESOLVED
+}
+
+enum MarketingReviewStatus {
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  NEEDS_CHANGES
+}
+
+enum AiReviewStatus {
+  DRAFT
+  REVIEWED
+  APPROVED
+}
+
+enum ActivityType {
+  LOGIN
+  PROFILE_UPDATED
+  OBLIGATION_CREATED
+  OBLIGATION_UPDATED
+  ARTIFACT_CREATED
+  ARTIFACT_LINKED
+  APPROVAL_ADDED
+  ANNUAL_REVIEW_UPDATED
+  EXAM_REQUEST_UPDATED
+  MARKETING_REVIEW_UPDATED
+  VENDOR_UPDATED
+  AI_GUIDANCE_REVIEWED
+}
+
+model Organization {
+  id                   String               @id @default(cuid())
+  name                 String
+  slug                 String               @unique
+  registrationType     RegistrationType     @default(STATE)
+  principalOfficeState String               @default("NY")
+  launchStage          LaunchStage          @default(NEWLY_LAUNCHED)
+  aumBand              AumBand              @default(UNDER_25M)
+  serviceModel         String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  memberships          Membership[]
+  firmProfile          FirmProfile?
+  launchMilestones     LaunchMilestone[]
+  launchPacketItems    LaunchPacketItem[]
+  obligations          ObligationInstance[]
+  artifacts            Artifact[]
+  approvals            Approval[]
+  annualReviews        AnnualReview[]
+  examRequests         ExamRequest[]
+  vendors              Vendor[]
+  incidents            IncidentLog[]
+  marketingReviews     MarketingReview[]
+  aiGuidance           AiGuidance[]
+  activityLogs         ActivityLog[]
+}
+
+model User {
+  id                       String            @id @default(cuid())
+  name                     String
+  email                    String            @unique
+  passwordHash             String
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  memberships              Membership[]
+  uploadedArtifacts        Artifact[]        @relation("UploadedArtifacts")
+  reviewsGiven             Approval[]        @relation("ApprovalReviewer")
+  reviewedGuidance         AiGuidance[]      @relation("GuidanceReviewer")
+  submittedMarketingItems  MarketingReview[] @relation("MarketingSubmitter")
+  activityLogs             ActivityLog[]
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MembershipRole
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownedItems     ObligationInstance[] @relation("ObligationOwner")
+  ownedLaunchPacketItems LaunchPacketItem[] @relation("LaunchPacketOwner")
+
+  @@unique([organizationId, userId])
+}
+
+model FirmProfile {
+  id                         String           @id @default(cuid())
+  organizationId             String           @unique
+  targetRegistrationType     RegistrationType
+  principalOfficeState       String
+  aumBand                    AumBand
+  custodyProfile             String
+  serviceModel               String
+  clientProfile              String
+  teamSize                   Int
+  usesTestimonials           Boolean          @default(false)
+  hasPrivateFunds            Boolean          @default(false)
+  marketingFlags             Json
+  vendorFlags                Json
+  jurisdictions              Json
+  keyVendors                 Json
+  note                       String?
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  organization               Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model LaunchMilestone {
+  id                String       @id @default(cuid())
+  organizationId    String
+  title             String
+  description       String
+  orderIndex        Int
+  status            WorkStatus   @default(NOT_STARTED)
+  dueDate           DateTime?
+  blockerCodes      Json?
+  whyItMatters      String
+  evidenceChecklist Json
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  packetItems       LaunchPacketItem[]
+
+  @@index([organizationId, orderIndex])
+}
+
+model LaunchPacketItem {
+  id                String         @id @default(cuid())
+  organizationId    String
+  milestoneId       String
+  ownerMembershipId String?
+  code              String
+  title             String
+  detail            String
+  sortOrder         Int
+  status            WorkStatus     @default(NOT_STARTED)
+  reviewStatus      ReviewStatus   @default(DRAFT)
+  dueDate           DateTime?
+  evidenceRequired  Json?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  milestone         LaunchMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  ownerMembership   Membership?    @relation("LaunchPacketOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  artifactLinks     ArtifactLink[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, milestoneId, sortOrder])
+  @@index([organizationId, dueDate])
+}
+
+model ObligationTemplate {
+  id                   String      @id @default(cuid())
+  code                 String      @unique
+  title                String
+  description          String
+  cadenceLabel         String
+  triggerConditions    Json
+  evidenceRequirements Json
+  riskLevel            RiskLevel
+  sourceReference      String
+  rationale            String
+  createdAt            DateTime    @default(now())
+  obligations          ObligationInstance[]
+}
+
+model ObligationInstance {
+  id                String        @id @default(cuid())
+  organizationId    String
+  templateId        String?
+  ownerMembershipId String?
+  title             String
+  description       String
+  status            WorkStatus    @default(NOT_STARTED)
+  reviewStatus      ReviewStatus  @default(DRAFT)
+  riskLevel         RiskLevel
+  dueDate           DateTime
+  cadenceLabel      String
+  evidenceRequired  Json
+  notes             String?
+  sourceRationale   String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template          ObligationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  ownerMembership   Membership?   @relation("ObligationOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  artifactLinks     ArtifactLink[]
+
+  @@index([organizationId, dueDate])
+  @@index([organizationId, status])
+}
+
+model Artifact {
+  id              String           @id @default(cuid())
+  organizationId  String
+  uploadedByUserId String?
+  title           String
+  fileName        String
+  category        ArtifactCategory
+  versionLabel    String
+  storageStatus   String
+  note            String?
+  placeholder     Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy      User?            @relation("UploadedArtifacts", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  links           ArtifactLink[]
+
+  @@index([organizationId, category])
+}
+
+model ArtifactLink {
+  id                String             @id @default(cuid())
+  artifactId        String
+  launchPacketItemId String?
+  obligationId      String?
+  annualReviewId    String?
+  examRequestId     String?
+  vendorId          String?
+  marketingReviewId String?
+  label             String?
+  createdAt         DateTime           @default(now())
+  artifact          Artifact           @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  launchPacketItem  LaunchPacketItem?  @relation(fields: [launchPacketItemId], references: [id], onDelete: Cascade)
+  obligation        ObligationInstance? @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  annualReview      AnnualReview?      @relation(fields: [annualReviewId], references: [id], onDelete: Cascade)
+  examRequest       ExamRequest?       @relation(fields: [examRequestId], references: [id], onDelete: Cascade)
+  vendor            Vendor?            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  marketingReview   MarketingReview?   @relation(fields: [marketingReviewId], references: [id], onDelete: Cascade)
+}
+
+model Approval {
+  id             String         @id @default(cuid())
+  organizationId String
+  reviewerId     String?
+  entityType     String
+  entityId       String
+  status         ApprovalStatus @default(PENDING)
+  comments       String?
+  createdAt      DateTime       @default(now())
+  approvedAt     DateTime?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewer       User?          @relation("ApprovalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, entityType, entityId])
+}
+
+model AnnualReview {
+  id             String             @id @default(cuid())
+  organizationId String
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         AnnualReviewStatus @default(NOT_STARTED)
+  summary        String
+  sectionsJson   Json
+  findingsJson   Json
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  artifactLinks  ArtifactLink[]
+}
+
+model ExamRequest {
+  id             String            @id @default(cuid())
+  organizationId String
+  title          String
+  requestedAt    DateTime
+  dueAt          DateTime
+  status         ExamRequestStatus @default(OPEN)
+  summary        String
+  itemsJson      Json
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  artifactLinks  ArtifactLink[]
+}
+
+model Vendor {
+  id                  String           @id @default(cuid())
+  organizationId      String
+  name                String
+  category            String
+  riskTier            VendorRiskTier
+  diligenceStatus     DiligenceStatus
+  lastReviewedAt      DateTime?
+  isServiceProvider   Boolean          @default(true)
+  summary             String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  artifactLinks       ArtifactLink[]
+}
+
+model IncidentLog {
+  id             String           @id @default(cuid())
+  organizationId String
+  title          String
+  severity       IncidentSeverity
+  status         IncidentStatus   @default(OPEN)
+  occurredAt     DateTime
+  summary        String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model MarketingReview {
+  id              String                @id @default(cuid())
+  organizationId  String
+  submitterId     String?
+  title           String
+  materialType    String
+  status          MarketingReviewStatus @default(SUBMITTED)
+  reviewerComment String?
+  checklistJson   Json
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submitter       User?                 @relation("MarketingSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+  artifactLinks   ArtifactLink[]
+}
+
+model AiGuidance {
+  id             String         @id @default(cuid())
+  organizationId String
+  reviewedById   String?
+  contextType    String
+  contextId      String
+  promptSummary  String
+  output         String
+  sourceRefs     Json
+  reviewStatus   AiReviewStatus @default(DRAFT)
+  createdAt      DateTime       @default(now())
+  reviewedAt     DateTime?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy     User?          @relation("GuidanceReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, contextType, contextId])
+}
+
+model ActivityLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String?
+  activityType   ActivityType
+  entityType     String
+  entityId       String
+  summary        String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}

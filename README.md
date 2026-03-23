@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RIA Launch & Compliance OS
 
-## Getting Started
+Pilot foundation for a newly launched, examination-ready RIA operating system.
 
-First, run the development server:
+This repo promotes the `Business Ideas/RIA App` strategy pack into a standalone implementation repo under `Code/active/`.
+
+## What is implemented
+
+- Next.js App Router application with a control-tower style UI
+- Multi-tenant-ready Prisma schema for organizations, roles, obligations, evidence, approvals, annual review, exam room, vendors, incidents, marketing review, AI guidance, and activity logs
+- Local cookie-based auth for seeded placeholder users
+- Profile-driven obligation generation and first-year launch milestone generation
+- Pilot pages for dashboard, launch workspace, intake, obligations, documents, annual review, exam room, marketing review, vendors, team, and settings
+- Strategy docs imported into `docs/strategy/`
+
+## Placeholder data posture
+
+This workspace follows global decision `D-014`: no realistic fake production data.
+
+The seed only creates explicitly labeled placeholder users, organizations, evidence artifacts, and workflow records. Replace them with real user-entered or source-backed data before any live pilot use.
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create the local database and generate the Prisma client:
+
+```bash
+npm run db:push
+```
+
+If Prisma hangs on this machine because the repo lives under Desktop/iCloud-backed paths, use the safe wrapper instead:
+
+```bash
+npm run db:push:safe
+```
+
+3. Seed the placeholder pilot workspace:
+
+```bash
+npm run db:seed
+```
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Placeholder login accounts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `founder@placeholder-ria.local` / `LaunchReady123!`
+- `cco@placeholder-ria.local` / `LaunchReady123!`
 
-## Learn More
+## Useful commands
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev
+npm run lint
+npm run typecheck
+npm run build
+npm run db:generate:safe
+npm run db:push
+npm run db:push:safe
+npm run db:seed
+npm run db:reset
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Important boundary
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The product assists workflow, documentation, evidence capture, and review. It does not make legal determinations or replace firm-specific legal advice.

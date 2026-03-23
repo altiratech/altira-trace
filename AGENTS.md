@@ -1,5 +1,9 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Repo Agent Rules
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+Always follow:
+- `/Users/ryanjameson/Desktop/Lifehub/SYSTEM/SESSION_PROTOCOL.md`
+
+Repo-specific notes:
+- Treat `docs/strategy/` as the implementation-facing copy of the RIA strategy pack.
+- Follow workspace decision `D-014`: no realistic fake production-like data. Use clearly labeled placeholder/demo records only.
+- Preserve the product boundary: workflow assistance and reviewable guidance, not legal advice.
