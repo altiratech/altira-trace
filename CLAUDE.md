@@ -1,9 +1,9 @@
-# Repo Claude Rules
+# RIA Launch Claude Review Rules
 
-Always follow:
-- `/Users/ryanjameson/Desktop/Lifehub/SYSTEM/SESSION_PROTOCOL.md`
+Read `CURRENT_STATUS.md`, `README.md`, and only the files needed for the review.
 
-Repo-specific notes:
-- Use `docs/strategy/` as the local strategy source of truth while building.
-- Keep all seeded/demo records explicitly labeled placeholder data.
-- Maintain the product boundary between operational guidance and legal advice.
+Do not load workspace history by default.
+
+Review focus:
+- Help with workflow clarity, compliance UX, and product-boundary risk.
+- Keep placeholder data explicit and avoid legal-advice drift.

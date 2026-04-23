@@ -11,6 +11,14 @@ import { buildGovernancePosture } from "@/lib/governance-posture";
 import { buildRegistrationGuide } from "@/lib/launch-guidance";
 import { getRoleFocus, hasCapability } from "@/lib/permissions";
 
+type OperatorAction = {
+  title: string;
+  detail: string;
+  href: string;
+  badge: string;
+  cta: string;
+};
+
 export default async function DashboardPage() {
   const { organization, membership, firmProfile } = await getViewerContext();
   const [dashboard, assignedObligations] = await Promise.all([
@@ -40,6 +48,88 @@ export default async function DashboardPage() {
     governance.prioritySignals.length > 0
       ? governance.prioritySignals.slice(0, 2)
       : governance.operationalSignals.slice(0, 1);
+  const operatorActions: OperatorAction[] = [];
+  const seenOperatorActionTitles = new Set<string>();
+  const addOperatorAction = (action: OperatorAction | null) => {
+    if (!action || seenOperatorActionTitles.has(action.title)) {
+      return;
+    }
+
+    seenOperatorActionTitles.add(action.title);
+    operatorActions.push(action);
+  };
+
+  if (totalMissingInformation > 0 && nextLaunchStep) {
+    addOperatorAction({
+      title: "Close launch profile gaps",
+      detail: `${totalMissingInformation} launch input gap${totalMissingInformation === 1 ? "" : "s"} are still blocking a cleaner filing packet. Start with ${nextLaunchStep.title.toLowerCase()}.`,
+      href: "/app/launch/intake",
+      badge: "ATTENTION_REQUIRED",
+      cta: "Update intake",
+    });
+  } else if (launchPacketPressure > 0) {
+    addOperatorAction({
+      title: "Move the launch packet",
+      detail: `${dashboard.metrics.launchPacketOverdue} overdue, ${dashboard.metrics.launchPacketAwaitingApproval} awaiting approval, and ${dashboard.metrics.launchPacketMissingEvidence} missing evidence across active packet work.`,
+      href: "/app/launch",
+      badge: "IN_PROGRESS",
+      cta: "Open launch workspace",
+    });
+  }
+
+  if (canReviewApprovals && dashboard.metrics.awaitingApproval > 0) {
+    addOperatorAction({
+      title: "Clear reviewer queue",
+      detail: `${dashboard.metrics.awaitingApproval} workflow item${dashboard.metrics.awaitingApproval === 1 ? "" : "s"} are waiting on founder or CCO review right now.`,
+      href: dashboard.approvals[0]?.entityHref ?? "/app/annual-review",
+      badge: "PENDING_APPROVAL",
+      cta: "Review approvals",
+    });
+  }
+
+  if (dashboard.metrics.missingEvidence > 0) {
+    addOperatorAction({
+      title: "Attach missing proof",
+      detail: `${dashboard.metrics.missingEvidence} launch or obligation record${dashboard.metrics.missingEvidence === 1 ? "" : "s"} still need linked support before the workflow reads as defensible.`,
+      href: "/app/documents",
+      badge: "PENDING_EVIDENCE",
+      cta: "Open documents",
+    });
+  }
+
+  if (assignedObligations.length > 0) {
+    const nextAssignedObligation = assignedObligations[0];
+
+    addOperatorAction({
+      title: "Work your assigned queue",
+      detail: `${nextAssignedObligation.title} is the first assigned obligation in your queue${nextAssignedObligation.dueDate ? ` and is due ${format(nextAssignedObligation.dueDate, "MMM d")}` : ""}.`,
+      href: `/app/obligations/${nextAssignedObligation.id}`,
+      badge: nextAssignedObligation.status,
+      cta: "Open obligation",
+    });
+  }
+
+  if (topGovernanceSignals.length > 0) {
+    const signal = topGovernanceSignals[0];
+
+    addOperatorAction({
+      title: "Confirm governed posture",
+      detail: signal.detail,
+      href: "/app/settings",
+      badge: signal.status,
+      cta: "Open settings",
+    });
+  }
+
+  if (operatorActions.length === 0) {
+    addOperatorAction({
+      title: roleFocus.primaryLabel,
+      detail: roleFocus.summary,
+      href: roleFocus.primaryHref,
+      badge: "COMPLETE",
+      cta: roleFocus.primaryLabel,
+    });
+  }
 
   const metrics = [
     {
@@ -304,37 +394,38 @@ export default async function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Current lane</CardTitle>
+              <CardTitle>Operator next moves</CardTitle>
               <CardDescription>{roleFocus.summary}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
               <div className="rounded-[24px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4">
-                <p className="font-medium">{roleFocus.title}</p>
-                <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                  Next best move: {roleFocus.primaryLabel.toLowerCase()}.
-                </p>
-              </div>
-              {assignedObligations.length === 0 ? (
-                <p className="text-sm text-[var(--ink-soft)]">
-                  No obligations are directly assigned to this membership yet.
-                </p>
-              ) : (
-                assignedObligations.slice(0, 3).map((obligation) => (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="font-medium">{roleFocus.title}</p>
                   <Link
-                    key={obligation.id}
-                    href={`/app/obligations/${obligation.id}`}
-                    className="rounded-[24px] bg-[var(--surface-strong)] p-4"
+                    href={roleFocus.primaryHref}
+                    className="text-sm font-medium text-[var(--accent)] transition-colors hover:text-[#0b5675]"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{obligation.title}</p>
-                      <StatusBadge value={obligation.status} />
-                    </div>
-                    <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                      Due {format(obligation.dueDate, "MMM d")}
-                    </p>
+                    {roleFocus.primaryLabel}
                   </Link>
-                ))
-              )}
+                </div>
+                <p className="mt-2 text-sm text-[var(--ink-soft)]">{roleFocus.summary}</p>
+              </div>
+              {operatorActions.slice(0, 3).map((action) => (
+                <Link
+                  key={action.title}
+                  href={action.href}
+                  className="rounded-[24px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4 transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-medium">{action.title}</p>
+                    <StatusBadge value={action.badge} />
+                  </div>
+                  <p className="mt-2 text-sm text-[var(--ink-soft)]">{action.detail}</p>
+                  <p className="mt-3 text-sm font-medium text-[var(--accent)]">
+                    {action.cta}
+                  </p>
+                </Link>
+              ))}
             </CardContent>
           </Card>
 

@@ -5,6 +5,7 @@ import { logoutAction } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SidebarNav } from "@/components/app/sidebar-nav";
+import { WorkspaceOrientation } from "@/components/app/workspace-orientation";
 import { getViewerContext } from "@/lib/data/workspace";
 import { getRoleFocus } from "@/lib/permissions";
 import { titleCase } from "@/lib/utils";
@@ -25,8 +26,13 @@ export async function AppShell({
             <div className="space-y-3">
               <Badge variant="accent">Pilot Foundation</Badge>
               <div>
+                <img
+                  src="/brand/altira-wordmark-dark.png"
+                  alt="Altira"
+                  className="w-[114px] max-w-full h-auto"
+                />
                 <p className="text-xs uppercase tracking-[0.24em] text-[var(--panel-muted)]">
-                  RIA Launch & Compliance OS
+                  Trace
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold leading-tight">
                   {organization.name}
@@ -57,6 +63,8 @@ export async function AppShell({
             </div>
 
             <SidebarNav role={membership.role} />
+
+            <WorkspaceOrientation role={membership.role} />
 
             <form action={logoutAction}>
               <Button

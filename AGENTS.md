@@ -1,9 +1,11 @@
-# Repo Agent Rules
+# RIA Launch Agent Rules
 
-Always follow:
-- `/Users/ryanjameson/Desktop/Lifehub/SYSTEM/SESSION_PROTOCOL.md`
+Read first:
+- `CURRENT_STATUS.md`
+- `README.md`
+- `docs/strategy/`
 
-Repo-specific notes:
-- Treat `docs/strategy/` as the implementation-facing copy of the RIA strategy pack.
-- Follow workspace decision `D-014`: no realistic fake production-like data. Use clearly labeled placeholder/demo records only.
-- Preserve the product boundary: workflow assistance and reviewable guidance, not legal advice.
+Rules:
+- Keep the product boundary on workflow assistance and reviewable guidance, not legal advice.
+- Keep all demo or placeholder records clearly labeled.
+- Use repo docs for strategy and product truth before broader workspace context.

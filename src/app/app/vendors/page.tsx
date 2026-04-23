@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import {
@@ -17,10 +18,33 @@ import {
   getVendorSnapshot,
   getViewerContext,
 } from "@/lib/data/workspace";
+import { buildGovernancePosture } from "@/lib/governance-posture";
+import { buildRegistrationGuide } from "@/lib/launch-guidance";
 import { canAccessRoute, hasCapability } from "@/lib/permissions";
 
+function getVendorGovernanceContext(
+  governance: ReturnType<typeof buildGovernancePosture>,
+) {
+  const signals = [
+    governance.boundarySignal,
+    ...governance.prioritySignals.filter((signal) =>
+      ["Vendor oversight posture", "Complexity escalation lane"].includes(
+        signal.title,
+      ),
+    ),
+  ].filter(Boolean);
+
+  return {
+    signals,
+    updatePrompt:
+      "Use the oversight summary to show whether diligence, incident posture, and follow-up still match the governed vendor posture.",
+    reviewPrompt:
+      "Approve only if the diligence record, linked support, and any escalation still match the governed vendor posture and review boundary.",
+  };
+}
+
 export default async function VendorsPage() {
-  const { organization, membership } = await getViewerContext();
+  const { organization, membership, firmProfile } = await getViewerContext();
 
   if (!canAccessRoute(membership.role, "vendors")) {
     notFound();
@@ -32,6 +56,10 @@ export default async function VendorsPage() {
   ]);
   const canManageVendors = hasCapability(membership.role, "manage_vendors");
   const canReviewApprovals = hasCapability(membership.role, "review_approvals");
+  const registrationGuide = buildRegistrationGuide(firmProfile);
+  const governance = buildGovernancePosture(firmProfile, registrationGuide);
+  const governanceContext = getVendorGovernanceContext(governance);
+  const hasGovernanceNote = Boolean(firmProfile?.note?.trim());
   const approvalEntries: Array<
     readonly [string, Awaited<ReturnType<typeof getApprovalsForEntity>>]
   > = await Promise.all(
@@ -120,6 +148,9 @@ export default async function VendorsPage() {
                           Oversight summary
                           <Textarea defaultValue={vendor.summary} name="summary" />
                         </label>
+                        <p className="text-xs text-[var(--ink-soft)]">
+                          {governanceContext.updatePrompt}
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" type="submit">
                             {vendor.diligenceStatus === "COMPLETE"
@@ -146,10 +177,44 @@ export default async function VendorsPage() {
 
                   <div className="grid gap-3">
                     <div className="rounded-[24px] border border-[color:var(--line)] bg-white px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="font-medium">Governance posture</p>
+                        <Link
+                          className="text-sm font-medium text-[var(--accent)] transition-colors hover:text-[#0b5675]"
+                          href="/app/settings"
+                        >
+                          Open settings
+                        </Link>
+                      </div>
+                      <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                        {governanceContext.reviewPrompt}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {governanceContext.signals.map((signal) => (
+                          <span
+                            key={signal.title}
+                            className="rounded-full border border-[color:var(--line)] bg-[var(--surface-strong)] px-3 py-1 text-xs text-[var(--ink-soft)]"
+                          >
+                            {signal.title} · {signal.status.toLowerCase().replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                      {hasGovernanceNote ? (
+                        <div className="mt-3 rounded-[20px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4">
+                          <p className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+                            Saved governance note
+                          </p>
+                          <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                            {firmProfile?.note}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="rounded-[24px] border border-[color:var(--line)] bg-white px-4 py-4">
                       <p className="font-medium">Signoff history</p>
                       <p className="mt-2 text-sm text-[var(--ink-soft)]">
                         {(approvalsByVendorId.get(vendor.id) ?? []).length
-                          ? "Reviewer decisions stay attached to the vendor diligence record."
+                          ? "Reviewer decisions stay attached to the vendor diligence record with its governed posture."
                           : "Mark diligence complete to create the first reviewer decision."}
                       </p>
                     </div>
@@ -175,12 +240,15 @@ export default async function VendorsPage() {
                         {canReviewApprovals && approval.status === "PENDING" ? (
                           <form action={reviewApprovalAction} className="mt-4 grid gap-3">
                             <input name="approvalId" type="hidden" value={approval.id} />
+                            <p className="rounded-[16px] border border-[color:var(--line)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+                              {governanceContext.reviewPrompt}
+                            </p>
                             <label className="grid gap-2 text-sm">
                               Reviewer note
                               <Textarea
                                 name="comments"
                                 defaultValue={approval.comments ?? ""}
-                                placeholder="Document the diligence gap or confirm why the vendor is signoff-ready."
+                                placeholder="Document how the vendor record aligns with the governed posture or what diligence, evidence, or escalation still needs work."
                               />
                             </label>
                             <div className="flex flex-wrap gap-2">

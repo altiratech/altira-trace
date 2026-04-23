@@ -1,39 +1,43 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginAction } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getDemoAccounts } from "@/lib/demo-accounts";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
-
-const demoUsers = [
-  {
-    label: "Founder Admin [Placeholder]",
-    email: "founder@placeholder-ria.local",
-    role: "Founder admin",
-  },
-  {
-    label: "CCO User [Placeholder]",
-    email: "cco@placeholder-ria.local",
-    role: "CCO",
-  },
-];
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const demoAccounts = useMemo(() => getDemoAccounts(), []);
+  const requestedDemoId = searchParams.get("demo");
+  const requestedDemoAccount =
+    demoAccounts.find((account) => account.id === requestedDemoId) ?? demoAccounts[0];
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: demoUsers[0].email,
-      password: "LaunchReady123!",
+      email: requestedDemoAccount.email,
+      password: requestedDemoAccount.password,
     },
   });
+  const selectedEmail = form.watch("email");
+  const selectedAccount =
+    demoAccounts.find((account) => account.email === selectedEmail) ?? requestedDemoAccount;
+
+  useEffect(() => {
+    if (!requestedDemoAccount) {
+      return;
+    }
+
+    form.setValue("email", requestedDemoAccount.email);
+    form.setValue("password", requestedDemoAccount.password);
+  }, [form, requestedDemoAccount]);
 
   const onSubmit = (values: LoginInput) => {
     setServerError(null);
@@ -46,26 +50,30 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/app/dashboard");
+      router.push(result?.redirectTo ?? selectedAccount.initialHref);
       router.refresh();
     });
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <Card className="overflow-hidden bg-[var(--panel)] text-[var(--panel-ink)]">
-        <CardHeader className="space-y-4 border-b border-white/8">
-          <CardTitle className="text-3xl">Launch into control</CardTitle>
-          <CardDescription className="max-w-xl text-[var(--panel-muted)]">
-            Sign into the pilot workspace to review the first-year readiness
-            dashboard, evidence center, approval queue, and exam room baseline.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          <form
-            className="grid gap-4"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
+    <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="rounded-[36px] border border-white/8 bg-[linear-gradient(155deg,rgba(17,37,50,0.98),rgba(28,56,74,0.95))] p-6 text-[var(--panel-ink)] shadow-[0_30px_80px_rgba(11,24,32,0.16)] lg:p-8">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--panel-muted)]">
+              Launch into control
+            </p>
+            <h2 className="max-w-xl text-3xl font-semibold leading-tight lg:text-4xl">
+              Enter the pilot through the role you want to pressure-test first.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-[var(--panel-muted)]">
+              The seeded accounts drop you into different operating views so you can feel the
+              founder, CCO, operations, and supervised-person lanes without rebuilding the same
+              story by hand.
+            </p>
+          </div>
+
+          <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid gap-2">
               <label className="text-sm font-medium" htmlFor="email">
                 Email
@@ -107,46 +115,82 @@ export function LoginForm() {
             ) : null}
 
             <Button className="mt-2" size="lg" type="submit" disabled={isPending}>
-              {isPending ? "Signing in..." : "Enter pilot workspace"}
+              {isPending ? "Signing in..." : `Enter as ${selectedAccount.roleLabel}`}
             </Button>
           </form>
 
-          <div className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--panel-muted)]">
-              Shared placeholder password
-            </p>
-            <p className="mt-2 text-lg font-medium">LaunchReady123!</p>
-            <p className="mt-2 text-sm text-[var(--panel-muted)]">
-              This app only seeds clearly labeled placeholder users and workflow
-              records. No production-like client or firm data is included.
-            </p>
+          <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-[28px] border border-white/8 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--panel-muted)]">
+                Shared placeholder password
+              </p>
+              <p className="mt-2 text-lg font-medium">{selectedAccount.password}</p>
+              <p className="mt-2 text-sm text-[var(--panel-muted)]">
+                Placeholder-only seeded users. No production client, firm, or filing data lives in
+                this workspace.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--panel-muted)]">
+                What opens first
+              </p>
+              <p className="mt-2 text-lg font-medium">{selectedAccount.initialLabel}</p>
+              <p className="mt-2 text-sm text-[var(--panel-muted)]">
+                {selectedAccount.preview}
+              </p>
+              <p className="mt-3 text-sm text-[var(--panel-muted)]">
+                Current lane: {selectedAccount.laneTitle}.
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <div className="grid gap-4">
-        {demoUsers.map((user) => (
+        {demoAccounts.map((account) => {
+          const isSelected = account.email === selectedAccount.email;
+
+          return (
           <button
-            key={user.email}
-            className="rounded-[28px] border border-[color:var(--line)] bg-[var(--surface)] p-5 text-left shadow-[0_18px_48px_rgba(11,24,32,0.06)] transition-transform hover:-translate-y-0.5"
+            key={account.email}
+            className={`rounded-[28px] border p-5 text-left shadow-[0_18px_48px_rgba(11,24,32,0.06)] transition-transform hover:-translate-y-0.5 ${
+              isSelected
+                ? "border-[color:var(--accent)] bg-[#fff6ea]"
+                : "border-[color:var(--line)] bg-[var(--surface)]"
+            }`}
             onClick={() => {
-              form.setValue("email", user.email);
-              form.setValue("password", "LaunchReady123!");
+              form.setValue("email", account.email);
+              form.setValue("password", account.password);
             }}
             type="button"
           >
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-              Quick fill
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)]">
+                {isSelected ? "Selected lane" : "Pilot lane"}
+              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)]">
+                {account.roleLabel}
+              </p>
+            </div>
             <h3 className="mt-3 text-lg font-semibold text-[var(--ink)]">
-              {user.label}
+              {account.label}
             </h3>
-            <p className="mt-1 text-sm text-[var(--ink-soft)]">{user.role}</p>
+            <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">{account.preview}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white px-3 py-1 text-xs text-[var(--ink-soft)]">
+                First screen · {account.initialLabel}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1 text-xs text-[var(--ink-soft)]">
+                Lane · {account.laneTitle}
+              </span>
+            </div>
             <p className="mt-4 text-sm font-medium text-[var(--accent-strong)]">
-              {user.email}
+              {account.email}
             </p>
           </button>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

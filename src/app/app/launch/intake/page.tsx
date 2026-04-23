@@ -9,6 +9,14 @@ import { buildRegistrationGuide } from "@/lib/launch-guidance";
 import { canAccessRoute } from "@/lib/permissions";
 import { StatusBadge } from "@/components/app/status-badge";
 
+type IntakeHandoffAction = {
+  title: string;
+  detail: string;
+  href: string;
+  badge: string;
+  cta: string;
+};
+
 export default async function LaunchIntakePage() {
   const { firmProfile, membership } = await getViewerContext();
   const registrationGuide = buildRegistrationGuide(firmProfile);
@@ -20,6 +28,55 @@ export default async function LaunchIntakePage() {
   const stepsWithGaps = registrationGuide.steps.filter(
     (step) => step.missingInformation.length > 0,
   );
+  const handoffActions: IntakeHandoffAction[] = [];
+  const firstStepWithGap = stepsWithGaps[0];
+  const leadGovernanceSignal =
+    governance.prioritySignals[0] ?? governance.operationalSignals[0] ?? null;
+
+  if (firstStepWithGap) {
+    handoffActions.push({
+      title: "Tighten the highest-leverage profile gap",
+      detail: `${firstStepWithGap.title} is still carrying open launch assumptions. ${firstStepWithGap.missingInformation[0]?.title ?? "Resolve the highlighted fields"} before treating the filing packet as grounded.`,
+      href: "/app/launch/intake",
+      badge: firstStepWithGap.status,
+      cta: "Finish intake updates",
+    });
+  }
+
+  handoffActions.push({
+    title:
+      totalMissingInformation > 0
+        ? "Open launch workspace with caveats"
+        : "Open the live launch workspace",
+    detail:
+      totalMissingInformation > 0
+        ? "You can start assigning owners and reviewing packet items now, but reviewers will still see the current profile gaps."
+        : "The saved profile is coherent enough to drive launch packet ownership, evidence linking, and approval routing.",
+    href: "/app/launch",
+    badge: totalMissingInformation > 0 ? "IN_PROGRESS" : "COMPLETE",
+    cta: "Go to launch workspace",
+  });
+
+  if (leadGovernanceSignal) {
+    handoffActions.push({
+      title: "Confirm governed posture",
+      detail: leadGovernanceSignal.detail,
+      href: "/app/settings",
+      badge: leadGovernanceSignal.status,
+      cta: "Open settings",
+    });
+  }
+
+  if (totalMissingInformation === 0) {
+    handoffActions.push({
+      title: "Start linking evidence",
+      detail:
+        "Once the profile is stable, the next credibility move is linking proof to launch packet work from the documents center.",
+      href: "/app/documents",
+      badge: "PENDING_EVIDENCE",
+      cta: "Open documents",
+    });
+  }
 
   if (!canAccessRoute(membership.role, "launch-intake")) {
     notFound();
@@ -44,6 +101,33 @@ export default async function LaunchIntakePage() {
         <FirmProfileForm profile={firmProfile} />
 
         <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>After you save this profile</CardTitle>
+              <CardDescription>
+                Intake should hand the team into the next operating surface, not leave them to guess what comes next.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {handoffActions.map((action) => (
+                <Link
+                  key={action.title}
+                  href={action.href}
+                  className="rounded-[24px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4 transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-medium">{action.title}</p>
+                    <StatusBadge value={action.badge} />
+                  </div>
+                  <p className="mt-2 text-sm text-[var(--ink-soft)]">{action.detail}</p>
+                  <p className="mt-3 text-sm font-medium text-[var(--accent)]">
+                    {action.cta}
+                  </p>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>What this drives</CardTitle>

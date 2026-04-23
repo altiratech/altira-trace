@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { createSession, destroySession } from "@/lib/auth/session";
+import { getRoleFocus } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { ActivityType } from "@prisma/client";
 
@@ -61,7 +62,10 @@ export async function loginAction(input: LoginInput) {
 
   revalidatePath("/", "layout");
 
-  return { success: true };
+  return {
+    success: true,
+    redirectTo: getRoleFocus(membership.role).primaryHref,
+  };
 }
 
 export async function logoutAction() {

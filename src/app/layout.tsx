@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "RIA Launch & Compliance OS",
   description:
     "Pilot foundation for a newly launched, examination-ready RIA operating system.",
+  icons: {
+    icon: "/brand/altira-icon-dark.png",
+  },
 };
 
 export default function RootLayout({
