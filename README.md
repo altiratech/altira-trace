@@ -1,6 +1,6 @@
-# RIA Launch & Compliance OS
+# Altira Trace
 
-RIA Launch & Compliance OS is a pilot foundation for a newly launched, examination-ready RIA operating system.
+Altira Trace is a pilot foundation for a newly launched, examination-ready RIA operating system.
 
 It focuses on workflow assistance, documentation, evidence capture, review, and operating cadence. It does not make legal determinations or replace firm-specific legal advice.
 
@@ -25,8 +25,8 @@ Seeded users, organizations, evidence artifacts, and workflow records are for lo
 ## Local Setup
 
 ```bash
-git clone https://github.com/altiratech/ria-launch-compliance-os.git
-cd ria-launch-compliance-os
+git clone https://github.com/altiratech/ria-launch-compliance-os.git altira-trace
+cd altira-trace
 npm install
 ```
 

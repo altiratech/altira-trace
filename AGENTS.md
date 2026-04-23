@@ -1,4 +1,4 @@
-# RIA Launch Agent Rules
+# Altira Trace Agent Rules
 
 Read first:
 - `CURRENT_STATUS.md`
