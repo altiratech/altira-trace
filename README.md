@@ -1,64 +1,69 @@
 # RIA Launch & Compliance OS
 
-Pilot foundation for a newly launched, examination-ready RIA operating system.
+RIA Launch & Compliance OS is a pilot foundation for a newly launched, examination-ready RIA operating system.
 
-This repo promotes the `Business Ideas/RIA App` strategy pack into a standalone implementation repo under `Code/active/`.
+It focuses on workflow assistance, documentation, evidence capture, review, and operating cadence. It does not make legal determinations or replace firm-specific legal advice.
 
-## What is implemented
+## Status
 
+Active pilot foundation.
+
+Implemented today:
 - Next.js App Router application with a control-tower style UI
-- Multi-tenant-ready Prisma schema for organizations, roles, obligations, evidence, approvals, annual review, exam room, vendors, incidents, marketing review, AI guidance, and activity logs
-- Local cookie-based auth for seeded placeholder users
-- Profile-driven obligation generation and first-year launch milestone generation
-- Pilot pages for dashboard, launch workspace, intake, obligations, documents, annual review, exam room, marketing review, vendors, team, and settings
-- Strategy docs imported into `docs/strategy/`
+- multi-tenant-ready Prisma schema for organizations, roles, obligations, evidence, approvals, annual review, exam room, vendors, incidents, marketing review, AI guidance, and activity logs
+- local cookie-based auth for seeded placeholder users
+- profile-driven obligation generation and first-year launch milestone generation
+- pilot pages for dashboard, launch workspace, intake, obligations, documents, annual review, exam room, marketing review, vendors, team, and settings
+- strategy docs in `docs/strategy/`
 
-## Placeholder data posture
+## Placeholder Data Posture
 
-This workspace follows global decision `D-014`: no realistic fake production data.
+This repo uses explicitly labeled placeholder data only.
 
-The seed only creates explicitly labeled placeholder users, organizations, evidence artifacts, and workflow records. Replace them with real user-entered or source-backed data before any live pilot use.
+Seeded users, organizations, evidence artifacts, and workflow records are for local pilot review. Replace them with real user-entered or source-backed records before any live use.
 
-## Local setup
-
-1. Install dependencies:
+## Local Setup
 
 ```bash
+git clone https://github.com/altiratech/ria-launch-compliance-os.git
+cd ria-launch-compliance-os
 npm install
 ```
 
-2. Create the local database and generate the Prisma client:
+Create the local database and generate the Prisma client:
 
 ```bash
 npm run db:push
 ```
 
-If Prisma hangs on this machine because the repo lives under Desktop/iCloud-backed paths, use the safe wrapper instead:
+If Prisma has trouble in your local filesystem environment, use the safe wrapper:
 
 ```bash
 npm run db:push:safe
 ```
 
-3. Seed the placeholder pilot workspace:
+Seed the placeholder pilot workspace:
 
 ```bash
 npm run db:seed
 ```
 
-4. Start the app:
+Start the app:
 
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000)
+Open `http://localhost:3000`.
 
-## Placeholder login accounts
+## Placeholder Login Accounts
 
 - `founder@placeholder-ria.local` / `LaunchReady123!`
 - `cco@placeholder-ria.local` / `LaunchReady123!`
 
-## Useful commands
+These accounts are local placeholder credentials for seeded demo data. Do not use them for live deployments.
+
+## Useful Commands
 
 ```bash
 npm run dev
@@ -72,6 +77,10 @@ npm run db:seed
 npm run db:reset
 ```
 
-## Important boundary
+## Product Boundary
 
-The product assists workflow, documentation, evidence capture, and review. It does not make legal determinations or replace firm-specific legal advice.
+The product assists governed workflow and review. Compliance judgment, legal interpretation, registration strategy, and firm-specific policy decisions remain the responsibility of qualified human operators and advisors.
+
+## License
+
+No open-source license has been selected yet. Public source visibility does not grant reuse rights until a license file is added.
