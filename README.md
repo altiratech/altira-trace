@@ -25,7 +25,7 @@ Seeded users, organizations, evidence artifacts, and workflow records are for lo
 ## Local Setup
 
 ```bash
-git clone https://github.com/altiratech/ria-launch-compliance-os.git altira-trace
+git clone https://github.com/altiratech/altira-trace.git
 cd altira-trace
 npm install
 ```
