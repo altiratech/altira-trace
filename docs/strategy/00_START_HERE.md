@@ -46,16 +46,19 @@ Several market dynamics make this a credible entry point:
 4. **04_PRODUCT_STRATEGY_AND_ROADMAP.md**  
    Product shape, scope boundaries, workflows, roadmap, and AI principles.
 
-5. **05_CODEX_BUILD_BRIEF.md**  
+5. **PUBLIC_DISCLOSURE_INTELLIGENCE.md**  
+   How Trace should eventually consume RIA Inflection Engine as its public-disclosure intelligence layer.
+
+6. **05_CODEX_BUILD_BRIEF.md**  
    The main product/build instruction set for Codex.
 
-6. **06_CODEX_PROMPTS_AND_BACKLOG.md**  
+7. **06_CODEX_PROMPTS_AND_BACKLOG.md**  
    Paste-ready prompts and a practical implementation sequence.
 
-7. **07_OPEN_QUESTIONS_AND_HYPOTHESES.md**  
+8. **07_OPEN_QUESTIONS_AND_HYPOTHESES.md**  
    What still needs validation before committing too hard.
 
-8. **08_RESEARCH_NOTES_AND_SOURCES.md**  
+9. **08_RESEARCH_NOTES_AND_SOURCES.md**  
    Source list and current research notes.
 
 ## How I would use this inside Codex
