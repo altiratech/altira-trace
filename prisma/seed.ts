@@ -7,10 +7,13 @@ import {
   ArtifactCategory,
   DiligenceStatus,
   ExamRequestStatus,
+  ExternalChangeSeverity,
+  ExternalChangeStatus,
   IncidentSeverity,
   IncidentStatus,
   MarketingReviewStatus,
   MembershipRole,
+  MonitoringSourceKind,
   PrismaClient,
   RegistrationType,
   ReviewStatus,
@@ -25,6 +28,10 @@ async function resetDatabase() {
   await prisma.artifactLink.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.aiGuidance.deleteMany();
+  await prisma.externalIntelligenceArtifact.deleteMany();
+  await prisma.externalChangeEvent.deleteMany();
+  await prisma.externalSnapshot.deleteMany();
+  await prisma.monitoringSource.deleteMany();
   await prisma.approval.deleteMany();
   await prisma.marketingReview.deleteMany();
   await prisma.incidentLog.deleteMany();
@@ -457,6 +464,195 @@ async function main() {
     },
   });
 
+  const regulatorSource = await prisma.monitoringSource.create({
+    data: {
+      organizationId: launchedOrg.id,
+      kind: MonitoringSourceKind.REGULATOR,
+      name: "Regulator guidance watch [Placeholder]",
+      url: "https://example.invalid/regulator-guidance-placeholder",
+      cadenceLabel: "Weekly placeholder review",
+      ownerNote:
+        "Placeholder source representing a regulator guidance or exam-priority page that a future producer would crawl.",
+    },
+  });
+
+  const vendorSource = await prisma.monitoringSource.create({
+    data: {
+      organizationId: launchedOrg.id,
+      kind: MonitoringSourceKind.VENDOR,
+      name: "Vendor trust center watch [Placeholder]",
+      url: "https://example.invalid/vendor-trust-center-placeholder",
+      cadenceLabel: "Monthly placeholder review",
+      ownerNote:
+        "Placeholder source representing a vendor trust, privacy, or service-provider page.",
+    },
+  });
+
+  const firmSiteSource = await prisma.monitoringSource.create({
+    data: {
+      organizationId: launchedOrg.id,
+      kind: MonitoringSourceKind.FIRM_SITE,
+      name: "Firm website marketing watch [Placeholder]",
+      url: "https://example.invalid/firm-site-placeholder",
+      cadenceLabel: "On-change placeholder review",
+      ownerNote:
+        "Placeholder source representing the RIA's public website and disclosure-sensitive marketing pages.",
+    },
+  });
+
+  const regulatorSnapshot = await prisma.externalSnapshot.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: regulatorSource.id,
+      capturedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+      contentHash: "placeholder-regulator-hash-v1",
+      format: "markdown",
+      summary:
+        "Placeholder snapshot of a regulator page that changed around documentation and review expectations.",
+      rawRef: "fixture://regulator-guidance-placeholder-v1",
+      producer: "RIA Inflection Engine fixture [Placeholder]",
+    },
+  });
+
+  const vendorSnapshot = await prisma.externalSnapshot.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: vendorSource.id,
+      capturedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+      contentHash: "placeholder-vendor-hash-v1",
+      format: "markdown",
+      summary:
+        "Placeholder snapshot of a vendor trust page with an updated subprocessors note.",
+      rawRef: "fixture://vendor-trust-center-placeholder-v1",
+      producer: "Cloudflare crawl sidecar fixture [Placeholder]",
+    },
+  });
+
+  const firmSiteSnapshot = await prisma.externalSnapshot.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: firmSiteSource.id,
+      capturedAt: new Date(Date.now() - 1000 * 60 * 60 * 18),
+      contentHash: "placeholder-firm-site-hash-v1",
+      format: "markdown",
+      summary:
+        "Placeholder snapshot of a public website page with testimonial and disclosure-sensitive copy.",
+      rawRef: "fixture://firm-site-marketing-placeholder-v1",
+      producer: "Cloudflare crawl sidecar fixture [Placeholder]",
+    },
+  });
+
+  const regulatorChange = await prisma.externalChangeEvent.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: regulatorSource.id,
+      snapshotId: regulatorSnapshot.id,
+      title: "Documentation expectation changed [Placeholder]",
+      summary:
+        "A regulator-watch fixture flagged language that may affect how the firm documents first-year supervisory review.",
+      severity: ExternalChangeSeverity.HIGH,
+      status: ExternalChangeStatus.NEW,
+      detectedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+      recommendedAction:
+        "Route to the next obligation review and confirm whether the evidence requirement should be refreshed.",
+      targetType: "obligation",
+      targetId: obligations[0]?.id,
+      sourceRefs: ["fixture://regulator-guidance-placeholder-v1#documentation"],
+      placeholder: true,
+    },
+  });
+
+  const vendorChange = await prisma.externalChangeEvent.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: vendorSource.id,
+      snapshotId: vendorSnapshot.id,
+      title: "Vendor trust page updated [Placeholder]",
+      summary:
+        "A vendor-watch fixture detected a changed trust-center note that should be reviewed against diligence evidence.",
+      severity: ExternalChangeSeverity.MEDIUM,
+      status: ExternalChangeStatus.TRIAGED,
+      detectedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+      recommendedAction:
+        "Route to vendor oversight and confirm whether the service-provider review packet still reflects the current vendor posture.",
+      targetType: "vendor",
+      targetId: vendor.id,
+      sourceRefs: ["fixture://vendor-trust-center-placeholder-v1#subprocessors"],
+      placeholder: true,
+    },
+  });
+
+  const firmSiteChange = await prisma.externalChangeEvent.create({
+    data: {
+      organizationId: launchedOrg.id,
+      sourceId: firmSiteSource.id,
+      snapshotId: firmSiteSnapshot.id,
+      title: "Public testimonial copy changed [Placeholder]",
+      summary:
+        "A firm-site fixture found disclosure-sensitive marketing language that should be compared with the retained approval record.",
+      severity: ExternalChangeSeverity.CRITICAL,
+      status: ExternalChangeStatus.NEW,
+      detectedAt: new Date(Date.now() - 1000 * 60 * 60 * 18),
+      recommendedAction:
+        "Route to marketing review before relying on the public page as approved copy.",
+      targetType: "marketing_review",
+      targetId: marketingReview.id,
+      sourceRefs: ["fixture://firm-site-marketing-placeholder-v1#testimonial-copy"],
+      placeholder: true,
+    },
+  });
+
+  await prisma.externalIntelligenceArtifact.createMany({
+    data: [
+      {
+        organizationId: launchedOrg.id,
+        changeEventId: regulatorChange.id,
+        artifactType: "review_signal",
+        title: "Regulator review signal [Placeholder]",
+        summary:
+          "Fixture-backed signal for testing how Trace routes regulator changes into obligation review.",
+        payloadJson: {
+          producer: "RIA Inflection Engine fixture [Placeholder]",
+          recommendedWorkflow: "obligation",
+          confidenceLabel: "fixture-only",
+        },
+        sourceRefs: ["fixture://regulator-guidance-placeholder-v1#documentation"],
+        reviewStatus: AiReviewStatus.DRAFT,
+      },
+      {
+        organizationId: launchedOrg.id,
+        changeEventId: vendorChange.id,
+        artifactType: "vendor_signal",
+        title: "Vendor diligence signal [Placeholder]",
+        summary:
+          "Fixture-backed signal for testing how vendor-page changes become diligence follow-up.",
+        payloadJson: {
+          producer: "Cloudflare crawl sidecar fixture [Placeholder]",
+          recommendedWorkflow: "vendor",
+          confidenceLabel: "fixture-only",
+        },
+        sourceRefs: ["fixture://vendor-trust-center-placeholder-v1#subprocessors"],
+        reviewStatus: AiReviewStatus.REVIEWED,
+        reviewedAt: new Date(),
+      },
+      {
+        organizationId: launchedOrg.id,
+        changeEventId: firmSiteChange.id,
+        artifactType: "marketing_drift_signal",
+        title: "Firm-site marketing drift signal [Placeholder]",
+        summary:
+          "Fixture-backed signal for testing how public-site drift becomes a marketing review action.",
+        payloadJson: {
+          producer: "Cloudflare crawl sidecar fixture [Placeholder]",
+          recommendedWorkflow: "marketing_review",
+          confidenceLabel: "fixture-only",
+        },
+        sourceRefs: ["fixture://firm-site-marketing-placeholder-v1#testimonial-copy"],
+        reviewStatus: AiReviewStatus.DRAFT,
+      },
+    ],
+  });
+
   await prisma.activityLog.createMany({
     data: [
       {
@@ -498,6 +694,15 @@ async function main() {
         entityType: "vendor",
         entityId: vendor.id,
         summary: "Vendor oversight record updated with placeholder diligence notes.",
+      },
+      {
+        organizationId: launchedOrg.id,
+        userId: cco.id,
+        activityType: ActivityType.EXTERNAL_INTELLIGENCE_UPDATED,
+        entityType: "external_change_event",
+        entityId: firmSiteChange.id,
+        summary:
+          "Firm-site monitoring fixture created a placeholder marketing review signal.",
       },
     ],
   });

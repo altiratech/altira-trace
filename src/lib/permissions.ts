@@ -8,6 +8,7 @@ export type AppRouteId =
   | "documents"
   | "annual-review"
   | "exam-room"
+  | "intelligence"
   | "marketing-review"
   | "vendors"
   | "team"
@@ -68,6 +69,11 @@ const routeAccess: Record<AppRouteId, MembershipRole[]> = {
     MembershipRole.OPERATIONS,
   ],
   "exam-room": [
+    MembershipRole.FOUNDER_ADMIN,
+    MembershipRole.CCO,
+    MembershipRole.OPERATIONS,
+  ],
+  intelligence: [
     MembershipRole.FOUNDER_ADMIN,
     MembershipRole.CCO,
     MembershipRole.OPERATIONS,

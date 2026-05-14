@@ -39,6 +39,8 @@ export default async function DashboardPage() {
     dashboard.metrics.launchPacketOverdue +
     dashboard.metrics.launchPacketAwaitingApproval +
     dashboard.metrics.launchPacketMissingEvidence;
+  const externalIntelligencePressure =
+    dashboard.metrics.openExternalChangeCount + dashboard.metrics.criticalExternalChangeCount;
   const nextLaunchStep =
     registrationGuide.steps.find((step) => step.missingInformation.length > 0) ??
     registrationGuide.steps.find((step) => step.status !== "COMPLETE") ??
@@ -84,6 +86,16 @@ export default async function DashboardPage() {
       href: dashboard.approvals[0]?.entityHref ?? "/app/annual-review",
       badge: "PENDING_APPROVAL",
       cta: "Review approvals",
+    });
+  }
+
+  if (dashboard.metrics.openExternalChangeCount > 0) {
+    addOperatorAction({
+      title: "Review external signals",
+      detail: `${dashboard.metrics.openExternalChangeCount} source-backed signal${dashboard.metrics.openExternalChangeCount === 1 ? "" : "s"} are waiting to be triaged, including ${dashboard.metrics.criticalExternalChangeCount} high-priority item${dashboard.metrics.criticalExternalChangeCount === 1 ? "" : "s"}.`,
+      href: "/app/intelligence",
+      badge: dashboard.metrics.criticalExternalChangeCount > 0 ? "HIGH" : "IN_PROGRESS",
+      cta: "Open intelligence",
     });
   }
 
@@ -151,6 +163,11 @@ export default async function DashboardPage() {
       label: "Evidence still missing",
       value: dashboard.metrics.missingEvidence,
       helper: "Open proof gaps across launch packet and obligation work",
+    },
+    {
+      label: "External signals",
+      value: dashboard.metrics.openExternalChangeCount,
+      helper: "Source-backed changes waiting for workflow review",
     },
   ];
 
@@ -347,6 +364,22 @@ export default async function DashboardPage() {
                     : "Current launch packet items are covered for due dates, evidence, and approval posture."}
                 </p>
               </Link>
+              <Link
+                href="/app/intelligence"
+                className="rounded-[24px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium">External intelligence</p>
+                  <StatusBadge
+                    value={externalIntelligencePressure > 0 ? "HIGH" : "COMPLETE"}
+                  />
+                </div>
+                <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                  {dashboard.metrics.openExternalChangeCount > 0
+                    ? `${dashboard.metrics.openExternalChangeCount} regulator, vendor, or firm-site signal${dashboard.metrics.openExternalChangeCount === 1 ? "" : "s"} need workflow triage.`
+                    : "No open external intelligence signals are waiting for review."}
+                </p>
+              </Link>
             </CardContent>
           </Card>
 
@@ -481,6 +514,52 @@ export default async function DashboardPage() {
                             ? "Blocked and likely needs upstream launch work resolved first."
                             : "Open launch work that should stay visible from the dashboard."}
                     </p>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>External signal queue</CardTitle>
+              <CardDescription>
+                Placeholder source changes prove the Trace workflow before live crawling is connected.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {dashboard.externalChangeEvents.length === 0 ? (
+                <p className="text-sm text-[var(--ink-soft)]">
+                  No external source changes are currently loaded.
+                </p>
+              ) : (
+                dashboard.externalChangeEvents.slice(0, 3).map((event) => (
+                  <Link
+                    key={event.id}
+                    href="/app/intelligence"
+                    className="rounded-[24px] border border-[color:var(--line)] bg-[var(--surface-strong)] p-4 transition-transform hover:-translate-y-0.5"
+                  >
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-1">
+                        <p className="font-medium">{event.title}</p>
+                        <p className="text-sm text-[var(--ink-soft)]">{event.summary}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge value={event.severity} />
+                        <StatusBadge value={event.status} />
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs text-[var(--ink-soft)]">
+                        {event.source.kind.replace(/_/g, " ").toLowerCase()}
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs text-[var(--ink-soft)]">
+                        {event.source.name}
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs text-[var(--ink-soft)]">
+                        {format(event.detectedAt, "MMM d")}
+                      </span>
+                    </div>
                   </Link>
                 ))
               )}

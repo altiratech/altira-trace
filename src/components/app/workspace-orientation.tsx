@@ -43,6 +43,11 @@ const routeMeta = [
     purpose: "request-ready exam response workflow",
   },
   {
+    href: "/app/intelligence",
+    label: "External Intelligence",
+    purpose: "source-backed regulator, vendor, and firm-site change review",
+  },
+  {
     href: "/app/marketing-review",
     label: "Marketing Review",
     purpose: "governed marketing approvals and retention posture",

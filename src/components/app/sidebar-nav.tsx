@@ -9,6 +9,7 @@ import {
   Flag,
   Gauge,
   LayoutDashboard,
+  Radar,
   SearchCheck,
   Settings,
   ShieldAlert,
@@ -48,6 +49,12 @@ const navItems = [
     href: "/app/exam-room",
     label: "Exam Room",
     icon: ShieldAlert,
+  },
+  {
+    routeId: "intelligence" as AppRouteId,
+    href: "/app/intelligence",
+    label: "Intelligence",
+    icon: Radar,
   },
   {
     routeId: "marketing-review" as AppRouteId,

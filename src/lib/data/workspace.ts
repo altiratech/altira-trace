@@ -79,6 +79,8 @@ export async function getDashboardSnapshot(organizationId: string) {
     artifacts,
     annualReview,
     activityLogs,
+    externalChangeEvents,
+    externalSourceCount,
   ] =
     await Promise.all([
       prisma.obligationInstance.findMany({
@@ -123,6 +125,29 @@ export async function getDashboardSnapshot(organizationId: string) {
         where: { organizationId },
         orderBy: { createdAt: "desc" },
         take: 8,
+      }),
+      prisma.externalChangeEvent.findMany({
+        where: { organizationId },
+        include: {
+          source: {
+            select: {
+              name: true,
+              kind: true,
+            },
+          },
+          artifacts: {
+            select: {
+              id: true,
+              title: true,
+              reviewStatus: true,
+            },
+          },
+        },
+        orderBy: [{ severity: "desc" }, { detectedAt: "desc" }],
+        take: 5,
+      }),
+      prisma.monitoringSource.count({
+        where: { organizationId, active: true },
       }),
     ]);
   const [hydratedApprovals, hydratedActivityLogs] = await Promise.all([
@@ -198,6 +223,12 @@ export async function getDashboardSnapshot(organizationId: string) {
       return left.sortOrder - right.sortOrder;
     })
     .slice(0, 3);
+  const openExternalChangeEvents = externalChangeEvents.filter(
+    (event) => event.status !== "DISMISSED" && event.status !== "LINKED",
+  );
+  const criticalExternalChangeCount = openExternalChangeEvents.filter(
+    (event) => event.severity === "CRITICAL" || event.severity === "HIGH",
+  ).length;
 
   return {
     obligations,
@@ -205,6 +236,7 @@ export async function getDashboardSnapshot(organizationId: string) {
     activityLogs: hydratedActivityLogs,
     annualReview,
     launchPacketFocus,
+    externalChangeEvents,
     metrics: {
       overdue,
       upcoming,
@@ -214,8 +246,60 @@ export async function getDashboardSnapshot(organizationId: string) {
       launchPacketOverdue,
       launchPacketAwaitingApproval,
       launchPacketMissingEvidence,
+      externalSourceCount,
+      openExternalChangeCount: openExternalChangeEvents.length,
+      criticalExternalChangeCount,
     },
   };
+}
+
+export async function getExternalIntelligenceSnapshot(organizationId: string) {
+  const [sources, changeEvents, artifacts, activityLogs] = await Promise.all([
+    prisma.monitoringSource.findMany({
+      where: { organizationId },
+      include: {
+        snapshots: {
+          orderBy: { capturedAt: "desc" },
+          take: 1,
+        },
+        changeEvents: {
+          orderBy: { detectedAt: "desc" },
+          take: 3,
+        },
+      },
+      orderBy: [{ kind: "asc" }, { name: "asc" }],
+    }),
+    prisma.externalChangeEvent.findMany({
+      where: { organizationId },
+      include: {
+        source: true,
+        snapshot: true,
+        artifacts: true,
+      },
+      orderBy: [{ severity: "desc" }, { detectedAt: "desc" }],
+    }),
+    prisma.externalIntelligenceArtifact.findMany({
+      where: { organizationId },
+      include: {
+        changeEvent: {
+          include: {
+            source: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.activityLog.findMany({
+      where: {
+        organizationId,
+        entityType: "external_change_event",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  ]);
+
+  return { sources, changeEvents, artifacts, activityLogs };
 }
 
 export async function getLaunchWorkspace(organizationId: string) {
@@ -783,8 +867,11 @@ async function hydrateActivityLogs(
   const obligationIds = activityLogs
     .filter((log) => log.entityType === "obligation")
     .map((log) => log.entityId);
+  const externalChangeEventIds = activityLogs
+    .filter((log) => log.entityType === "external_change_event")
+    .map((log) => log.entityId);
 
-  const [launchPacketItemMap, obligationMap] = await Promise.all([
+  const [launchPacketItemMap, obligationMap, externalChangeEventMap] = await Promise.all([
     launchPacketItemIds.length
       ? prisma.launchPacketItem
           .findMany({
@@ -835,6 +922,29 @@ async function hydrateActivityLogs(
           })
           .then((items) => new Map(items.map((item) => [item.id, item])))
       : Promise.resolve(new Map<string, never>()),
+    externalChangeEventIds.length
+      ? prisma.externalChangeEvent
+          .findMany({
+            where: {
+              organizationId,
+              id: { in: externalChangeEventIds },
+            },
+            select: {
+              id: true,
+              title: true,
+              severity: true,
+              status: true,
+              targetType: true,
+              source: {
+                select: {
+                  name: true,
+                  kind: true,
+                },
+              },
+            },
+          })
+          .then((items) => new Map(items.map((item) => [item.id, item])))
+      : Promise.resolve(new Map<string, never>()),
   ]);
 
   return activityLogs.map((log) => {
@@ -866,6 +976,21 @@ async function hydrateActivityLogs(
         ...log,
         entityLabel: entity?.title ?? "Obligation",
         entityHref: entity ? `/app/obligations/${entity.id}` : "/app/obligations",
+      };
+    }
+
+    if (log.entityType === "external_change_event") {
+      const entity = externalChangeEventMap.get(log.entityId);
+
+      return {
+        ...log,
+        entityLabel: entity?.title ?? "External intelligence signal",
+        entityHref: "/app/intelligence",
+        contextLine: entity
+          ? `${entity.source.kind.replace(/_/g, " ").toLowerCase()} · ${entity.source.name}`
+          : undefined,
+        entityStatus: entity?.status,
+        entityReviewStatus: entity?.severity,
       };
     }
 

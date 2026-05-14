@@ -128,6 +128,26 @@ enum AiReviewStatus {
   APPROVED
 }
 
+enum MonitoringSourceKind {
+  REGULATOR
+  VENDOR
+  FIRM_SITE
+}
+
+enum ExternalChangeSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ExternalChangeStatus {
+  NEW
+  TRIAGED
+  LINKED
+  DISMISSED
+}
+
 enum ActivityType {
   LOGIN
   PROFILE_UPDATED
@@ -141,6 +161,7 @@ enum ActivityType {
   MARKETING_REVIEW_UPDATED
   VENDOR_UPDATED
   AI_GUIDANCE_REVIEWED
+  EXTERNAL_INTELLIGENCE_UPDATED
 }
 
 model Organization {
@@ -168,6 +189,10 @@ model Organization {
   marketingReviews     MarketingReview[]
   aiGuidance           AiGuidance[]
   activityLogs         ActivityLog[]
+  monitoringSources    MonitoringSource[]
+  externalSnapshots    ExternalSnapshot[]
+  externalChangeEvents ExternalChangeEvent[]
+  externalIntelligenceArtifacts ExternalIntelligenceArtifact[]
 }
 
 model User {
@@ -407,6 +432,90 @@ model Vendor {
   updatedAt           DateTime         @updatedAt
   organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   artifactLinks       ArtifactLink[]
+}
+
+model MonitoringSource {
+  id             String               @id @default(cuid())
+  organizationId String
+  kind           MonitoringSourceKind
+  name           String
+  url            String
+  cadenceLabel   String
+  active         Boolean              @default(true)
+  ownerNote      String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  snapshots      ExternalSnapshot[]
+  changeEvents   ExternalChangeEvent[]
+
+  @@index([organizationId, kind])
+  @@index([organizationId, active])
+}
+
+model ExternalSnapshot {
+  id             String            @id @default(cuid())
+  organizationId String
+  sourceId       String
+  capturedAt     DateTime
+  contentHash    String
+  format         String
+  summary        String
+  rawRef         String?
+  producer       String
+  source         MonitoringSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  changeEvents   ExternalChangeEvent[]
+
+  @@index([organizationId, capturedAt])
+  @@index([sourceId, capturedAt])
+}
+
+model ExternalChangeEvent {
+  id             String                 @id @default(cuid())
+  organizationId String
+  sourceId       String
+  snapshotId     String?
+  title          String
+  summary        String
+  severity       ExternalChangeSeverity
+  status         ExternalChangeStatus   @default(NEW)
+  detectedAt     DateTime
+  recommendedAction String
+  targetType     String?
+  targetId       String?
+  sourceRefs     Json
+  placeholder    Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source         MonitoringSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  snapshot       ExternalSnapshot?      @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  artifacts      ExternalIntelligenceArtifact[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, severity])
+  @@index([organizationId, targetType, targetId])
+  @@index([sourceId, detectedAt])
+}
+
+model ExternalIntelligenceArtifact {
+  id             String              @id @default(cuid())
+  organizationId String
+  changeEventId  String?
+  artifactType   String
+  title          String
+  summary        String
+  payloadJson    Json
+  sourceRefs     Json
+  reviewStatus   AiReviewStatus      @default(DRAFT)
+  createdAt      DateTime            @default(now())
+  reviewedAt     DateTime?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  changeEvent    ExternalChangeEvent? @relation(fields: [changeEventId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, artifactType])
+  @@index([organizationId, reviewStatus])
 }
 
 model IncidentLog {
