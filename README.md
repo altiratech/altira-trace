@@ -14,6 +14,7 @@ Implemented today:
 - local cookie-based auth for seeded placeholder users
 - profile-driven obligation generation and first-year launch milestone generation
 - pilot pages for dashboard, launch workspace, intake, obligations, documents, annual review, exam room, marketing review, vendors, team, and settings
+- fixture-backed external intelligence prototype surface for reviewing source-backed disclosure signals before they become workflow evidence
 - strategy docs in `docs/strategy/`
 
 ## Placeholder Data Posture
